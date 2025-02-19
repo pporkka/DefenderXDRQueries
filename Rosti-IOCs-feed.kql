@@ -1,0 +1,53 @@
+// DefenderXDR Rösti 
+// NOTE: this may return large amount of results. Example query restricted to 3d range.
+// Query is based on this Weekly Microsoft OSINT feed query: 
+// https://github.com/SlimKQL/Hunting-Queries-Detection-Rules/blob/main/DefenderXDR/DefenderXDR%20Weekly%20OSINT%20Indicators%20Scan.kql
+
+let WeeklyOSINT=externaldata(Type:string, Value:string, ExpirationTime:string, Action:string, Severity:string,Title:string,Description:string, RecommendedActions:string,RbacGroups:string,Category:string,MitreTechniques:string,GenerateAlert:string)
+[h'https://rosti.bin.re/feeds/mde-all'];
+let OSINTSHA256 =
+WeeklyOSINT
+| where Type == "FileSha256"
+| project Value;
+let OSINTSHA1 =
+WeeklyOSINT
+| where Type == "FileSha1"
+| project Value;
+let OSINTDOMAIN =
+WeeklyOSINT
+| where Type == "DomainName"
+| project Value;
+let OSINTURL =
+WeeklyOSINT
+| where Type == "Url"
+| project Value;
+let OSINTIP =
+WeeklyOSINT
+| where Type == "IpAddress"
+| project Value;
+let ScanEmailAttachments =
+EmailAttachmentInfo
+| where Timestamp > ago(3d)
+| where SHA256 has_any(OSINTSHA256);
+let ScanEmailURLs =
+EmailUrlInfo
+| where Timestamp > ago(3d)
+| where UrlDomain has_any(OSINTDOMAIN) or Url has_any(OSINTURL);
+let ScanEndpointFiles =
+DeviceFileEvents
+| where Timestamp > ago(3d)
+| where ActionType == "FileCreated"
+| where SHA1 has_any(OSINTSHA1) or SHA256 has_any(OSINTSHA256);
+let ScanEndpointNetwork1 =
+DeviceNetworkEvents
+| where Timestamp > ago(3d)
+| where ActionType == "ConnectionSuccess"
+| where RemoteIP has_any (OSINTIP) or RemoteUrl has_any (OSINTDOMAIN);
+let ScanEndpointNetwork2 =
+DeviceNetworkEvents
+| where Timestamp > ago(3d)
+| where ActionType == "HttpConnectionInspected"
+| extend ConnectInfo = todynamic(AdditionalFields)
+| extend HttpHost = ConnectInfo.host
+| where HttpHost has_any(OSINTDOMAIN);
+union ScanEmailAttachments, ScanEmailURLs, ScanEndpointFiles, ScanEndpointNetwork1, ScanEndpointNetwork2
