@@ -3,8 +3,11 @@
 // https://github.com/SlimKQL/Hunting-Queries-Detection-Rules/blob/main/DefenderXDR/DefenderXDR%20Weekly%20OSINT%20Indicators%20Scan.kql
 // Change timerange variable to suit your needs (default 3 days (3d))
 // Beware in environments where devs use VS code, the devtunnels is often used and this will query will return lots of most likely false positives
+// enable ipfilter below for specific addresses that are often used in normal use by vscode
 
 let timerange = ago(3d);
+let ipfilter = dynamic([]);
+//let ipfilter = dynamic(["20.103.221.187", "13.107.6.175"]);
 let RostiOSINTFeed=externaldata(Type:string, Value:string, ExpirationTime:string, Action:string, Severity:string,Title:string,Description:string, RecommendedActions:string,RbacGroups:string,Category:string,MitreTechniques:string,GenerateAlert:string)
 [h'https://rosti.bin.re/feeds/mde-all'];
 let OSINTSHA256 =
@@ -26,6 +29,7 @@ RostiOSINTFeed
 let OSINTIP =
 RostiOSINTFeed
 | where Type == "IpAddress"
+| where Value !in (ipfilter)
 | project Value;
 let ScanEmailAttachments =
 EmailAttachmentInfo
@@ -44,7 +48,7 @@ let ScanEndpointNetwork1 =
 DeviceNetworkEvents
 | where Timestamp > timerange
 | where ActionType == "ConnectionSuccess"
-| where RemoteIP has_any (OSINTIP) or RemoteUrl has_any (OSINTDOMAIN);
+| where RemoteIP has_any (OSINTIP) or RemoteUrl has_any (OSINTDOMAIN)
 let ScanEndpointNetwork2 =
 DeviceNetworkEvents
 | where Timestamp > timerange
