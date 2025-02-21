@@ -1,0 +1,53 @@
+// DefenderXDR Rösti 
+// Query is based on this Weekly Microsoft OSINT feed query: 
+// https://github.com/SlimKQL/Hunting-Queries-Detection-Rules/blob/main/DefenderXDR/DefenderXDR%20Weekly%20OSINT%20Indicators%20Scan.kql
+// Feed data downloaded from https://rosti.bin.re/
+// Change timerange variable to suit your needs (default 3 days (3d))
+// NOTE: This query does not do email URL or email attachment checks. See this instead: https://github.com/pporkka/DefenderXDRQueries/blob/main/Rosti-IOCs-feed.kql
+// Beware in environments where devs use VS code, the devtunnels is often used and this will query will return lots of most likely false positives
+// enable ipfilter below for specific addresses that are often used in normal use by vscode
+
+let timerange = ago(3d);
+let ipfilter = dynamic([]);
+//let ipfilter = dynamic(["20.103.221.187", "13.107.6.175"]);
+let RostiOSINTFeed=externaldata(Type:string, Value:string, ExpirationTime:string, Action:string, Severity:string,Title:string,Description:string, RecommendedActions:string,RbacGroups:string,Category:string,MitreTechniques:string,GenerateAlert:string)
+[h'https://rosti.bin.re/feeds/mde-all'];
+let OSINTSHA256 =
+RostiOSINTFeed
+| where Type == "FileSha256"
+| project Value;
+let OSINTSHA1 =
+RostiOSINTFeed
+| where Type == "FileSha1"
+| project Value;
+let OSINTDOMAIN =
+RostiOSINTFeed
+| where Type == "DomainName"
+| project Value;
+let OSINTURL =
+RostiOSINTFeed
+| where Type == "Url"
+| project Value;
+let OSINTIP =
+RostiOSINTFeed
+| where Type == "IpAddress"
+| where Value !in (ipfilter)
+| project Value;
+let ScanEndpointFiles =
+DeviceFileEvents
+| where Timestamp > timerange
+| where ActionType == "FileCreated"
+| where SHA1 has_any(OSINTSHA1) or SHA256 has_any(OSINTSHA256);
+let ScanEndpointNetwork1 =
+DeviceNetworkEvents
+| where Timestamp > timerange
+| where ActionType == "ConnectionSuccess"
+| where RemoteIP has_any (OSINTIP) or RemoteUrl has_any (OSINTDOMAIN)
+let ScanEndpointNetwork2 =
+DeviceNetworkEvents
+| where Timestamp > timerange
+| where ActionType == "HttpConnectionInspected"
+| extend ConnectInfo = todynamic(AdditionalFields)
+| extend HttpHost = ConnectInfo.host
+| where HttpHost has_any(OSINTDOMAIN);
+union ScanEndpointFiles, ScanEndpointNetwork1, ScanEndpointNetwork2
