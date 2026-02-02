@@ -1,0 +1,13 @@
+// Crude and rude (consuming perverse amount of sentinel resources) to find notepad-plus-plus installers where hash is not among the official releases
+// The hash list from: https://github.com/Neo23x0/notepad-plus-plus-hashes/tree/main
+let hashes = externaldata(version_tag:string, release_title:string, release_date:string, prerelease:string, release_url:string,hash_algorithm:string,hash_value:string, inferred_asset_name:string,source_location:string,checksum_asset_name:string,checksum_asset_url:string)
+[h'https://raw.githubusercontent.com/Neo23x0/notepad-plus-plus-hashes/refs/heads/main/notepadpp_release_hashes.csv'];
+let hashdistilled = hashes
+| where hash_algorithm == "sha256"
+| project hash_value;
+DeviceFileEvents
+| where TimeGenerated between (datetime("2025-06-01T00:00:00.001Z") .. datetime("2025-12-01T00:00:00.001Z"))
+| where FileName startswith "npp." and FileName !startswith "npp.8.9." and FileName endswith ".exe"
+| where isnotempty(SHA256)
+| where not(SHA256 has_any (hashdistilled))
+| project DeviceName, FileName, FolderPath, SHA256
