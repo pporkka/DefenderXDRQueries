@@ -1,0 +1,10 @@
+// DefenderXDR query to detect newly installed extensions that are either malicious or suspicious
+// Note: The list may include only some latest ones.
+// Read the readme.md https://github.com/pporkka/MaliciousChromeExt
+let chromeext = externaldata(chromeidentifier:string, name_title:string, downloads_num:string, exttype: string)
+[h'https://raw.githubusercontent.com/pporkka/MaliciousChromeExt/refs/heads/main/chrome_extensions_all.csv'] with (format='csv', ignoreFirstRecord=true);
+DeviceFileEvents
+| where ActionType == "FileCreated" and FileName endswith ".crx" 
+| extend chromeidentifier = substring(FileName, 0, 32)
+| join kind=inner chromeext on chromeidentifier
+| project DeviceName, chromeidentifier, name_title, exttype
