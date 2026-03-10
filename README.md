@@ -11,6 +11,9 @@ Sentinel query, to span june 2025 onwardrs. https://github.com/pporkka/DefenderX
 
 Rosti-IOCs-feed.kql - using https://rosti.bin.re/feeds/mde-all to find interesting events. Note this may produce huge amount of results. You may want to change the feed to one of the other more restricted types found here: https://rosti.bin.re/feeds (look at the bottom of the page for Defender for Endpoint iocs)
 
+### KQL_SuspiciousChromeExtensions.kql
+Query to get a list (my list, others exist in which case you can use this as an example) and verify your environment endpoints against the known malicious (or suspicious) chrome extensions. Please, see https://github.com/pporkka/MaliciousChromeExt
+
 ## Vulnerability data
 
 Queries for existing vulnerabilities (unpatched) in devices from Defender XDR data
