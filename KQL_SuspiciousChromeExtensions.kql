@@ -5,6 +5,6 @@ let chromeext = externaldata(chromeidentifier:string, name_title:string, downloa
 [h'https://raw.githubusercontent.com/pporkka/MaliciousChromeExt/refs/heads/main/chrome_extensions_all.csv'] with (format='csv', ignoreFirstRecord=true);
 DeviceFileEvents
 | where ActionType == "FileCreated" and FileName endswith ".crx" 
-| extend chromeidentifier = substring(FileName, 0, 32)
+| extend chromeidentifier = tolower(substring(FileName, 0, 32))
 | join kind=inner chromeext on chromeidentifier
 | project DeviceName, chromeidentifier, name_title, exttype
